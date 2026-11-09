@@ -3,7 +3,6 @@ import subprocess
 import tempfile
 import os
 import csv
-from text2qti.qti import QTI
 
 st.set_page_config(page_title="USTGS Canvas QTI Converter", page_icon="📝")
 
@@ -18,27 +17,30 @@ with tab1:
     st.subheader("Upload text2qti Format File")
     
     with st.expander("ℹ️ View text2qti Format Example", expanded=False):
-        st.markdown("""Text files must have the following format:
-```text
-Quiz title: Sample Quiz
-1. What is 2 + 2?
-a) 3
-*b) 4
-c) 5
-```""")
+        st.markdown("Text files must follow standard `text2qti` format:")
+        st.code(
+            "Quiz title: Sample Quiz\n\n"
+            "1. What is 2 + 2?\n"
+            "a) 3\n"
+            "*b) 4\n"
+            "c) 5",
+            language="text"
+        )
         
     txt_file = st.file_uploader("Choose a .txt file", type=["txt"], key="txt")
     
     if txt_file is not None:
         raw_text = txt_file.read().decode("utf-8")
         
+        with st.expander("📄 Preview Uploaded Content", expanded=False):
+            st.code(raw_text, language="text")
+            
         if st.button("Convert text2qti File", type="primary"):
             with tempfile.TemporaryDirectory() as tmpdir:
                 input_path = os.path.join(tmpdir, "quiz.txt")
                 with open(input_path, "w", encoding="utf-8") as f:
                     f.write(raw_text)
                 
-                # Execute text2qti CLI directly via subprocess
                 result = subprocess.run(["text2qti", input_path], capture_output=True, text=True)
                 
                 zip_path = os.path.join(tmpdir, "quiz.zip")
@@ -60,16 +62,15 @@ with tab2:
     with st.expander("ℹ️ View CSV Format Guidelines", expanded=False):
         st.markdown("""
 - **Column 1:** Question text
-- **Column 2:** 1-based index of the correct answer (e.g. `1` for Option A, `2` for Option B, etc.)
+- **Column 2:** 1-based index of correct answer (`1` for Choice A, `2` for Choice B, etc.)
 - **Columns 3+:** Answer choices
-
-**Example CSV rows:**
-```csv
-What is 2 + 2?,2,3,4,5
-What is the capital of France?,1,Paris,Rome,Berlin
-```
-*(Header rows will be automatically skipped if Column 2 is not a number)*
 """)
+        st.code(
+            "What is 2 + 2?,2,3,4,5\n"
+            "What is the capital of France?,1,Paris,Rome,Berlin",
+            language="csv"
+        )
+        st.caption("*(Header rows are automatically skipped if Column 2 is not a number)*")
 
     csv_file = st.file_uploader("Choose a .csv or tab-delimited .txt file", type=["csv", "txt"], key="csv")
     
@@ -89,7 +90,7 @@ What is the capital of France?,1,Paris,Rome,Berlin
             try:
                 correct_idx = int(row[1].strip()) - 1
             except ValueError:
-                # Skips header or invalid index row
+                # Skips header row
                 continue
             choices = [c.strip() for c in row[2:] if c.strip()]
             if not choices or correct_idx < 0 or correct_idx >= len(choices):
@@ -105,7 +106,15 @@ What is the capital of France?,1,Paris,Rome,Berlin
             
         final_text2qti_str = "\n".join(converted_text2qti)
         
-        if st.button("Convert CSV File", type="primary"):
+        total_questions = q_num - 1
+        if total_questions > 0:
+            st.info(f"✅ Detected **{total_questions}** question(s).")
+            with st.expander("📄 Preview Converted text2qti Format", expanded=False):
+                st.code(final_text2qti_str, language="text")
+        else:
+            st.warning("No valid questions detected. Please verify your CSV columns.")
+        
+        if st.button("Convert CSV File", type="primary", disabled=(total_questions == 0)):
             with tempfile.TemporaryDirectory() as tmpdir:
                 input_path = os.path.join(tmpdir, "converted_csv.txt")
                 with open(input_path, "w", encoding="utf-8") as f:
@@ -123,8 +132,5 @@ What is the capital of France?,1,Paris,Rome,Berlin
                             file_name=f"{os.path.splitext(csv_file.name)[0]}.zip",
                             mime="application/zip"
                         )
-                else:
-                    st.error(f"Error converting CSV to QTI:\n{result.stderr}")
-
                 else:
                     st.error(f"Error converting CSV to QTI:\n{result.stderr}")
