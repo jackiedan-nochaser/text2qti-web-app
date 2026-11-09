@@ -134,3 +134,15 @@ with tab2:
                         )
                 else:
                     st.error(f"Error converting CSV to QTI:\n{result.stderr}")
+
+st.divider()
+
+with st.expander("📖 How to Import into Canvas LMS", expanded=False):
+    st.markdown("""
+1. Go to your Canvas course and click **Settings** (in the left-hand navigation).
+2. Click **Import Course Content** on the right sidebar.
+3. Under **Content Type**, select **QTI .zip file**.
+4. Choose the generated `.zip` file from this app.
+5. *(Optional)* Select or create a **Default Question Bank**.
+6. Click **Import**. Canvas will process the file and populate the quiz in your **Quizzes** section.
+""")
